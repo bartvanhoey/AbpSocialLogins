@@ -30,208 +30,218 @@ using Volo.Abp.VirtualFileSystem;
 
 namespace AbpSocialLogins
 {
-    [DependsOn(
-        typeof(AbpSocialLoginsHttpApiModule),
-        typeof(AbpAutofacModule),
-        typeof(AbpAspNetCoreMultiTenancyModule),
-        typeof(AbpSocialLoginsApplicationModule),
-        typeof(AbpSocialLoginsEntityFrameworkCoreDbMigrationsModule),
-        typeof(AbpAspNetCoreMvcUiBasicThemeModule),
-        typeof(AbpAspNetCoreAuthenticationJwtBearerModule),
-        typeof(AbpAccountWebIdentityServerModule),
-        typeof(AbpAspNetCoreSerilogModule),
-        typeof(AbpSwashbuckleModule)
-    )]
-    public class AbpSocialLoginsHttpApiHostModule : AbpModule
+  [DependsOn(
+      typeof(AbpSocialLoginsHttpApiModule),
+      typeof(AbpAutofacModule),
+      typeof(AbpAspNetCoreMultiTenancyModule),
+      typeof(AbpSocialLoginsApplicationModule),
+      typeof(AbpSocialLoginsEntityFrameworkCoreDbMigrationsModule),
+      typeof(AbpAspNetCoreMvcUiBasicThemeModule),
+      typeof(AbpAspNetCoreAuthenticationJwtBearerModule),
+      typeof(AbpAccountWebIdentityServerModule),
+      typeof(AbpAspNetCoreSerilogModule),
+      typeof(AbpSwashbuckleModule)
+  )]
+  public class AbpSocialLoginsHttpApiHostModule : AbpModule
+  {
+    private const string DefaultCorsPolicyName = "Default";
+
+    public override void ConfigureServices(ServiceConfigurationContext context)
     {
-        private const string DefaultCorsPolicyName = "Default";
+      var configuration = context.Services.GetConfiguration();
+      var hostingEnvironment = context.Services.GetHostingEnvironment();
 
-        public override void ConfigureServices(ServiceConfigurationContext context)
-        {
-            var configuration = context.Services.GetConfiguration();
-            var hostingEnvironment = context.Services.GetHostingEnvironment();
-
-            ConfigureBundles();
-            ConfigureUrls(configuration);
-            ConfigureConventionalControllers();
-            ConfigureAuthentication(context, configuration);
-            ConfigureLocalization();
-            ConfigureVirtualFileSystem(context);
-            ConfigureCors(context, configuration);
-            ConfigureSwaggerServices(context, configuration);
-        }
-
-        private void ConfigureBundles()
-        {
-            Configure<AbpBundlingOptions>(options =>
-            {
-                options.StyleBundles.Configure(
-                    BasicThemeBundles.Styles.Global,
-                    bundle => { bundle.AddFiles("/global-styles.css"); }
-                );
-            });
-        }
-
-        private void ConfigureUrls(IConfiguration configuration)
-        {
-            Configure<AppUrlOptions>(options =>
-            {
-                options.Applications["MVC"].RootUrl = configuration["App:SelfUrl"];
-                options.RedirectAllowedUrls.AddRange(configuration["App:RedirectAllowedUrls"].Split(','));
-            });
-        }
-
-        private void ConfigureVirtualFileSystem(ServiceConfigurationContext context)
-        {
-            var hostingEnvironment = context.Services.GetHostingEnvironment();
-
-            if (hostingEnvironment.IsDevelopment())
-            {
-                Configure<AbpVirtualFileSystemOptions>(options =>
-                {
-                    options.FileSets.ReplaceEmbeddedByPhysical<AbpSocialLoginsDomainSharedModule>(
-                        Path.Combine(hostingEnvironment.ContentRootPath,
-                            $"..{Path.DirectorySeparatorChar}AbpSocialLogins.Domain.Shared"));
-                    options.FileSets.ReplaceEmbeddedByPhysical<AbpSocialLoginsDomainModule>(
-                        Path.Combine(hostingEnvironment.ContentRootPath,
-                            $"..{Path.DirectorySeparatorChar}AbpSocialLogins.Domain"));
-                    options.FileSets.ReplaceEmbeddedByPhysical<AbpSocialLoginsApplicationContractsModule>(
-                        Path.Combine(hostingEnvironment.ContentRootPath,
-                            $"..{Path.DirectorySeparatorChar}AbpSocialLogins.Application.Contracts"));
-                    options.FileSets.ReplaceEmbeddedByPhysical<AbpSocialLoginsApplicationModule>(
-                        Path.Combine(hostingEnvironment.ContentRootPath,
-                            $"..{Path.DirectorySeparatorChar}AbpSocialLogins.Application"));
-                });
-            }
-        }
-
-        private void ConfigureConventionalControllers()
-        {
-            Configure<AbpAspNetCoreMvcOptions>(options =>
-            {
-                options.ConventionalControllers.Create(typeof(AbpSocialLoginsApplicationModule).Assembly);
-            });
-        }
-
-        private void ConfigureAuthentication(ServiceConfigurationContext context, IConfiguration configuration)
-        {
-            context.Services.AddAuthentication()
-                .AddJwtBearer(options =>
-                {
-                    options.Authority = configuration["AuthServer:Authority"];
-                    options.RequireHttpsMetadata = Convert.ToBoolean(configuration["AuthServer:RequireHttpsMetadata"]);
-                    options.Audience = "AbpSocialLogins";
-                    options.BackchannelHttpHandler = new HttpClientHandler
-                    {
-                        ServerCertificateCustomValidationCallback =
-                            HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-                    };
-                });
-        }
-
-        private static void ConfigureSwaggerServices(ServiceConfigurationContext context, IConfiguration configuration)
-        {
-            context.Services.AddAbpSwaggerGenWithOAuth(
-                configuration["AuthServer:Authority"],
-                new Dictionary<string, string>
-                {
-                    {"AbpSocialLogins", "AbpSocialLogins API"}
-                },
-                options =>
-                {
-                    options.SwaggerDoc("v1", new OpenApiInfo {Title = "AbpSocialLogins API", Version = "v1"});
-                    options.DocInclusionPredicate((docName, description) => true);
-                });
-        }
-
-        private void ConfigureLocalization()
-        {
-            Configure<AbpLocalizationOptions>(options =>
-            {
-                options.Languages.Add(new LanguageInfo("ar", "ar", "العربية"));
-                options.Languages.Add(new LanguageInfo("cs", "cs", "Čeština"));
-                options.Languages.Add(new LanguageInfo("en", "en", "English"));
-                options.Languages.Add(new LanguageInfo("en-GB", "en-GB", "English (UK)"));
-                options.Languages.Add(new LanguageInfo("fr", "fr", "Français"));
-                options.Languages.Add(new LanguageInfo("hu", "hu", "Magyar"));
-                options.Languages.Add(new LanguageInfo("pt-BR", "pt-BR", "Português"));
-                options.Languages.Add(new LanguageInfo("ru", "ru", "Русский"));
-                options.Languages.Add(new LanguageInfo("tr", "tr", "Türkçe"));
-                options.Languages.Add(new LanguageInfo("zh-Hans", "zh-Hans", "简体中文"));
-                options.Languages.Add(new LanguageInfo("zh-Hant", "zh-Hant", "繁體中文"));
-                options.Languages.Add(new LanguageInfo("de-DE", "de-DE", "Deutsch", "de"));
-                options.Languages.Add(new LanguageInfo("es", "es", "Español", "es"));
-            });
-        }
-
-        private void ConfigureCors(ServiceConfigurationContext context, IConfiguration configuration)
-        {
-            context.Services.AddCors(options =>
-            {
-                options.AddPolicy(DefaultCorsPolicyName, builder =>
-                {
-                    builder
-                        .WithOrigins(
-                            configuration["App:CorsOrigins"]
-                                .Split(",", StringSplitOptions.RemoveEmptyEntries)
-                                .Select(o => o.RemovePostFix("/"))
-                                .ToArray()
-                        )
-                        .WithAbpExposedHeaders()
-                        .SetIsOriginAllowedToAllowWildcardSubdomains()
-                        .AllowAnyHeader()
-                        .AllowAnyMethod()
-                        .AllowCredentials();
-                });
-            });
-        }
-
-        public override void OnApplicationInitialization(ApplicationInitializationContext context)
-        {
-            var app = context.GetApplicationBuilder();
-            var env = context.GetEnvironment();
-
-            if (env.IsDevelopment())
-            {
-                app.UseDeveloperExceptionPage();
-            }
-
-            app.UseAbpRequestLocalization();
-
-            if (!env.IsDevelopment())
-            {
-                app.UseErrorPage();
-            }
-
-            app.UseCorrelationId();
-            app.UseVirtualFiles();
-            app.UseRouting();
-            app.UseCors(DefaultCorsPolicyName);
-            app.UseAuthentication();
-            app.UseJwtTokenMiddleware();
-
-            if (MultiTenancyConsts.IsEnabled)
-            {
-                app.UseMultiTenancy();
-            }
-
-            app.UseUnitOfWork();
-            app.UseIdentityServer();
-            app.UseAuthorization();
-
-            app.UseSwagger();
-            app.UseAbpSwaggerUI(c =>
-            {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "AbpSocialLogins API");
-
-                var configuration = context.ServiceProvider.GetRequiredService<IConfiguration>();
-                c.OAuthClientId(configuration["AuthServer:SwaggerClientId"]);
-                c.OAuthClientSecret(configuration["AuthServer:SwaggerClientSecret"]);
-            });
-
-            app.UseAuditing();
-            app.UseAbpSerilogEnrichers();
-            app.UseConfiguredEndpoints();
-        }
+      ConfigureBundles();
+      ConfigureUrls(configuration);
+      ConfigureConventionalControllers();
+      ConfigureAuthentication(context, configuration);
+      ConfigureLocalization();
+      ConfigureVirtualFileSystem(context);
+      ConfigureCors(context, configuration);
+      ConfigureSwaggerServices(context, configuration);
     }
+
+    private void ConfigureBundles()
+    {
+      Configure<AbpBundlingOptions>(options =>
+      {
+        options.StyleBundles.Configure(
+                  BasicThemeBundles.Styles.Global,
+                  bundle => { bundle.AddFiles("/global-styles.css"); }
+              );
+      });
+    }
+
+    private void ConfigureUrls(IConfiguration configuration)
+    {
+      Configure<AppUrlOptions>(options =>
+      {
+        options.Applications["MVC"].RootUrl = configuration["App:SelfUrl"];
+        options.RedirectAllowedUrls.AddRange(configuration["App:RedirectAllowedUrls"].Split(','));
+      });
+    }
+
+    private void ConfigureVirtualFileSystem(ServiceConfigurationContext context)
+    {
+      var hostingEnvironment = context.Services.GetHostingEnvironment();
+
+      if (hostingEnvironment.IsDevelopment())
+      {
+        Configure<AbpVirtualFileSystemOptions>(options =>
+        {
+          options.FileSets.ReplaceEmbeddedByPhysical<AbpSocialLoginsDomainSharedModule>(
+                      Path.Combine(hostingEnvironment.ContentRootPath,
+                          $"..{Path.DirectorySeparatorChar}AbpSocialLogins.Domain.Shared"));
+          options.FileSets.ReplaceEmbeddedByPhysical<AbpSocialLoginsDomainModule>(
+                      Path.Combine(hostingEnvironment.ContentRootPath,
+                          $"..{Path.DirectorySeparatorChar}AbpSocialLogins.Domain"));
+          options.FileSets.ReplaceEmbeddedByPhysical<AbpSocialLoginsApplicationContractsModule>(
+                      Path.Combine(hostingEnvironment.ContentRootPath,
+                          $"..{Path.DirectorySeparatorChar}AbpSocialLogins.Application.Contracts"));
+          options.FileSets.ReplaceEmbeddedByPhysical<AbpSocialLoginsApplicationModule>(
+                      Path.Combine(hostingEnvironment.ContentRootPath,
+                          $"..{Path.DirectorySeparatorChar}AbpSocialLogins.Application"));
+        });
+      }
+    }
+
+    private void ConfigureConventionalControllers()
+    {
+      Configure<AbpAspNetCoreMvcOptions>(options =>
+      {
+        options.ConventionalControllers.Create(typeof(AbpSocialLoginsApplicationModule).Assembly);
+      });
+    }
+
+    private void ConfigureAuthentication(ServiceConfigurationContext context, IConfiguration configuration)
+    {
+      context.Services.AddAuthentication()
+          .AddJwtBearer(options =>
+          {
+            options.Authority = configuration["AuthServer:Authority"];
+            options.RequireHttpsMetadata = Convert.ToBoolean(configuration["AuthServer:RequireHttpsMetadata"]);
+            options.Audience = "AbpSocialLogins";
+            options.BackchannelHttpHandler = new HttpClientHandler
+            {
+              ServerCertificateCustomValidationCallback =
+                          HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+            };
+          });
+
+      context.Services.AddAuthentication()
+            .AddFacebook(facebook =>
+            {
+                facebook.AppId = configuration["Authentication:Facebook:AppId"];
+                facebook.AppSecret = configuration["Authentication:Facebook:AppSecret"];
+                facebook.Scope.Add("email");
+                facebook.Scope.Add("public_profile");
+            });
+
+    }
+
+    private static void ConfigureSwaggerServices(ServiceConfigurationContext context, IConfiguration configuration)
+    {
+      context.Services.AddAbpSwaggerGenWithOAuth(
+          configuration["AuthServer:Authority"],
+          new Dictionary<string, string>
+          {
+                    {"AbpSocialLogins", "AbpSocialLogins API"}
+          },
+          options =>
+          {
+            options.SwaggerDoc("v1", new OpenApiInfo { Title = "AbpSocialLogins API", Version = "v1" });
+            options.DocInclusionPredicate((docName, description) => true);
+          });
+    }
+
+    private void ConfigureLocalization()
+    {
+      Configure<AbpLocalizationOptions>(options =>
+      {
+        options.Languages.Add(new LanguageInfo("ar", "ar", "العربية"));
+        options.Languages.Add(new LanguageInfo("cs", "cs", "Čeština"));
+        options.Languages.Add(new LanguageInfo("en", "en", "English"));
+        options.Languages.Add(new LanguageInfo("en-GB", "en-GB", "English (UK)"));
+        options.Languages.Add(new LanguageInfo("fr", "fr", "Français"));
+        options.Languages.Add(new LanguageInfo("hu", "hu", "Magyar"));
+        options.Languages.Add(new LanguageInfo("pt-BR", "pt-BR", "Português"));
+        options.Languages.Add(new LanguageInfo("ru", "ru", "Русский"));
+        options.Languages.Add(new LanguageInfo("tr", "tr", "Türkçe"));
+        options.Languages.Add(new LanguageInfo("zh-Hans", "zh-Hans", "简体中文"));
+        options.Languages.Add(new LanguageInfo("zh-Hant", "zh-Hant", "繁體中文"));
+        options.Languages.Add(new LanguageInfo("de-DE", "de-DE", "Deutsch", "de"));
+        options.Languages.Add(new LanguageInfo("es", "es", "Español", "es"));
+      });
+    }
+
+    private void ConfigureCors(ServiceConfigurationContext context, IConfiguration configuration)
+    {
+      context.Services.AddCors(options =>
+      {
+        options.AddPolicy(DefaultCorsPolicyName, builder =>
+              {
+                builder
+                          .WithOrigins(
+                              configuration["App:CorsOrigins"]
+                                  .Split(",", StringSplitOptions.RemoveEmptyEntries)
+                                  .Select(o => o.RemovePostFix("/"))
+                                  .ToArray()
+                          )
+                          .WithAbpExposedHeaders()
+                          .SetIsOriginAllowedToAllowWildcardSubdomains()
+                          .AllowAnyHeader()
+                          .AllowAnyMethod()
+                          .AllowCredentials();
+              });
+      });
+    }
+
+    public override void OnApplicationInitialization(ApplicationInitializationContext context)
+    {
+      var app = context.GetApplicationBuilder();
+      var env = context.GetEnvironment();
+
+      if (env.IsDevelopment())
+      {
+        app.UseDeveloperExceptionPage();
+      }
+
+      app.UseAbpRequestLocalization();
+
+      if (!env.IsDevelopment())
+      {
+        app.UseErrorPage();
+      }
+
+      app.UseCorrelationId();
+      app.UseVirtualFiles();
+      app.UseRouting();
+      app.UseCors(DefaultCorsPolicyName);
+      app.UseAuthentication();
+      app.UseJwtTokenMiddleware();
+
+      if (MultiTenancyConsts.IsEnabled)
+      {
+        app.UseMultiTenancy();
+      }
+
+      app.UseUnitOfWork();
+      app.UseIdentityServer();
+      app.UseAuthorization();
+
+      app.UseSwagger();
+      app.UseAbpSwaggerUI(c =>
+      {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "AbpSocialLogins API");
+
+        var configuration = context.ServiceProvider.GetRequiredService<IConfiguration>();
+        c.OAuthClientId(configuration["AuthServer:SwaggerClientId"]);
+        c.OAuthClientSecret(configuration["AuthServer:SwaggerClientSecret"]);
+      });
+
+      app.UseAuditing();
+      app.UseAbpSerilogEnrichers();
+      app.UseConfiguredEndpoints();
+    }
+  }
 }
